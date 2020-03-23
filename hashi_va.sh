@@ -202,7 +202,7 @@ push_config () {
       fi
       if [ $diff_result -eq 1 ]
       then
-        cp -f "${staging_template}" "${config_file}"
+        mv -f "${staging_template}" "${config_file}"
         if [ $? -ne 0 ]
         then
           echo "WARNING: cp failed during configuration push!"
