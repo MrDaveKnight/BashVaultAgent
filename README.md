@@ -1,4 +1,4 @@
-BashVaultAgent, or HashiVA, is a simple daemon written in Bash
+BashVaultAgent, or BashiVA, is a simple daemon written in Bash
 to mimic much of vault-agent's functionality. It ...
 - Logs into the HashiCorp Vault server via AppRole authentication
 - Downloads secrets on behalf of an application
@@ -7,7 +7,7 @@ to mimic much of vault-agent's functionality. It ...
   a template, and signalling the application to refresh/restart
   when changes are available
 
-HashiVA was built to support AIX.
+BashiVA was built to support AIX.
 It has been tested on AIX and MacOS.
 
 Template Example:

@@ -11,8 +11,8 @@ vault_token="nada"
 
 usage () {
   cat << EOF
-Usage:  APP_ROLE_SECRET="<app_role_secret>" hashi_va.sh [-hv] -c <file>
-  -c  Config <file> name
+Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
+  -c  Config <file> 
   -h  Usage
   -v  Verbose
 EOF
@@ -67,7 +67,7 @@ EOM
 
 cleanup() {
  rv=$?
- rm -f .hashi_vault_agent_config_tmp.tx
+ rm -f .bashi_vault_agent_config_tmp.tx
  exit $rv
 }
 trap "cleanup" INT TERM EXIT
@@ -264,12 +264,12 @@ refresh_configs () {
 
         # AIX sed does not have -i option (that is the gnu verions)
         sed "s/{{ *${replacement_target} *}}/${secret_value}/g" \
-          ${template_file} > .hashi_vault_agent_config_tmp.txt
+          ${template_file} > .bashi_vault_agent_config_tmp.txt
         if [ $? -ne 0 ]
         then
           echo "WARNING: sed failed during configuration staging!"
         fi
-        mv .hashi_vault_agent_config_tmp.txt ${template_file}
+        mv .bashi_vault_agent_config_tmp.txt ${template_file}
         if [ $? -ne 0 ]
         then
           echo "WARNING: mv failed during configuration staging!"
