@@ -72,6 +72,16 @@ cleanup() {
 }
 trap "cleanup" INT TERM EXIT
 
+renew_token() {
+  if [ $verbose -eq 1 ]
+  then
+    echo "INFO: vault token renewal scheduled"
+  fi
+  logged_in=0
+  login_attempts=0
+}
+trap "renew_token" HUP
+
 read_field_value () {
   # usage: read_field value "<json string>" "<field_name>" "<field_type>"
   # <field_type> should be "string", "number" or "bool"
