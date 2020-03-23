@@ -3,6 +3,7 @@
 logged_in=0
 login_attempts=0
 login_attempts_max=4
+comm_error_count=0
 
 config="nada"
 verbose=0
@@ -47,6 +48,7 @@ EOM
   if [ errors = "permission denied" ]
   then
     echo "ERROR: login returned permission denied, aborting!"
+    echo "ERROR: please verify app role ID and Secret"
     return 105
   fi
 
@@ -134,6 +136,17 @@ get_secret () {
   retval=$?
   if [ $retval -eq 0 ]
   then
+
+    # Here is where we try to determine if your token lease expired
+    local errors=$(read_field_value "${vault_response}" "errors" "string")
+    if [ errors = "permission denied" ]
+    then
+      echo "INFO: vault token appears to have been revoked"
+      echo "INFO: setting status to logged out"
+      logged_in=0
+      login_attempts=0
+    fi
+
     secret_string=$(read_field_value "${vault_response}" "$2" $3)
     retval=$?
   fi
@@ -214,6 +227,8 @@ push_config () {
 
 refresh_configs () {
 
+  local retval=0
+
   init_config_staging
 
   for secret_spec in "${secrets[@]}"
@@ -226,8 +241,8 @@ refresh_configs () {
       IFS='|' read -ra field_spec <<< "${spec_items[i]}"
       local secret_name="${field_spec[0]}"
       local secret_value=$(get_secret "${vault_path}" "${secret_name}" "${field_spec[1]}")
-      local code=$?
-      if [ $code -ne 0 ]
+      retval=$?
+      if [ $retval -ne 0 ]
       then
         echo "WARNING: secret read failed with error code: ${code}"
       fi
@@ -254,6 +269,7 @@ refresh_configs () {
   done
 
   push_config
+  return $retval
 }
 
 while getopts ":hva:c:n:i:r:" opt; do
@@ -278,9 +294,6 @@ then
   usage
   exit 1
 fi
-
-# DEBUG ONLY
-echo "APP_ROLE_SECRET: $APP_ROLE_SECRET"
 
 #################
 # Configuration
@@ -370,6 +383,13 @@ do
   # Do your job
   #################
   refresh_configs
+
+  if [ $? -ne 0 ]
+  then
+    comm_error_count=$((comm_error_count + 1))
+  else
+    comm_error_count=0
+  fi
 
   if [ $verbose -eq 1 ]
   then
