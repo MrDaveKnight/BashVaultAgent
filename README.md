@@ -32,3 +32,10 @@ Example:
   Will be replaced by this line in the application's config file
 
     <password> tiger </password>
+
+Workflow:
+1. Install two files: bashi_va.sh and bashi_va.cfg
+2. Configure vault server AppRole and policies for each app
+2. Build your app configuration templates
+3. Configure bashi_va.cfg
+4. Run bashi_va.sh
