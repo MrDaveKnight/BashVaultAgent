@@ -1,15 +1,25 @@
 BashVaultAgent, or BashiVA, is a simple daemon written in Bash
-to mimic HashiCorp's vault-agent which is written in Go.
+to mimic HashiCorp's vault-agent written in Go.
 It ...
-- Logs into the HashiCorp Vault server via AppRole authentication
-- Downloads secrets on behalf of an application
-- Injects those secrets into the application by generating
-  an application native configuration file on disk that is based on
-  a template, and signalling the application to refresh/restart
-  when changes are available
+  - Logs into the HashiCorp Vault server via AppRole authentication
+  - Downloads secrets from Vault on behalf of an application
+  - Injects those secrets into the application by generating
+    an application native configuration file on disk that is based on
+    a template, and signalling the application to refresh/restart
+    when those changes are available
 
-BashiVA was built to support AIX.
+BashiVA was built specifically to support AIX, and to be simple
+and easily customizable. It is built in the true spirit of the 
+UNIX Philosoply in that it stands on the shoulder of giants, namely:
+  
+  curl, awk, sed, diff, mv & rm
+  
 It has been tested on AIX, Linux and MacOS.
+
+Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
+  -c  Config <file> 
+  -h  Usage
+  -v  Verbose
 
 Template Example:
 
@@ -18,8 +28,8 @@ Template Example:
 
   This line in a config template
 
-    \<password\> {{ WEBDB::password }} \<\/password\>
+    <password> {{ WEBDB::password }} </password>
 
   Would be replaced by this line in the app config file
 
-    \<password\> tiger \<\/password\>
+    <password> tiger </password>
