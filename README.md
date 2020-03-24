@@ -14,9 +14,9 @@ stands on the shoulders of giants, namely - curl, awk, sed, diff, mv & rm.
 It has been tested on AIX, Linux and MacOS.
 
 ```
-Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file><br />
-    -c Config <file><br />
-    -h Help<br />
+Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
+    -c Config <file>
+    -h Help
     -v Verbose
 ```
 
