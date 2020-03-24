@@ -4,8 +4,8 @@ It ...
   - Logs into the HashiCorp Vault server via AppRole authentication
   - Downloads secrets from Vault on behalf of an application
   - Injects those secrets into an application by generating
-    a configuration file from a template and those secrets, and signalling the 
-    application to refresh/restart when the file is available
+    a configuration file from a template and the secrets, and signalling the 
+    application to refresh or restart when the file is available
 
 BashiVA was built specifically to support AIX, and to be simple
 and easily customizable. It was built in accordance with the UNIX Philosopy and
@@ -29,6 +29,6 @@ Example:
 
     <password> {{ WEBDB::password }} </password>
 
-  Would be replaced by this line in the app config file
+  Would be replaced by this line in the application's config file
 
     <password> tiger </password>
