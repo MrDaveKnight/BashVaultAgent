@@ -17,7 +17,7 @@ UNIX Philosoply in that it stands on the shoulder of giants, namely:
 It has been tested on AIX, Linux and MacOS.
 
 Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
-  -c  Config <file> 
+  -c  Config <file>
   -h  Usage
   -v  Verbose
 
