@@ -17,7 +17,9 @@ Template Example:
   the secret value of the "password" field is "tiger", then ...
 
   This line in a config template
-    <password> {{ WEBDB::password }} </password>
+
+    \<password\> {{ WEBDB::password }} \<\/password\>
 
   Would be replaced by this line in the app config file
-    <password> tiger </password>
+
+    \<password\> tiger \<\/password\>
