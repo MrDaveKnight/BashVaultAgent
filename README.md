@@ -15,9 +15,9 @@ UNIX Philosoply in that it stands on the shoulder of giants, namely: curl, awk, 
 It has been tested on AIX, Linux and MacOS.
 
 Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file><br/>
-    -c Config <file><br/>
-    -h Help<br/>
-    -v Verbose
+&nbsp&nbsp&nbsp&nbsp-c Config <file><br/>
+&nbsp&nbsp&nbsp&nbsp-h Help<br/>
+&nbsp&nbsp&nbsp&nbsp-v Verbose
 
 Template Example:
 
