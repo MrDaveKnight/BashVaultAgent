@@ -3,14 +3,13 @@ to mimic HashiCorp's vault-agent written in Go.
 It ...
   - Logs into the HashiCorp Vault server via AppRole authentication
   - Downloads secrets from Vault on behalf of an application
-  - Injects those secrets into the application by generating
-    an application native configuration file on disk that is based on
-    a template, and signalling the application to refresh/restart
-    when those changes are available
+  - Injects those secrets into an application by generating
+    a configuration file from a template and those secrets, and signalling the 
+    application to refresh/restart when the file is available
 
 BashiVA was built specifically to support AIX, and to be simple
-and easily customizable. It was built in the spirit of the 
-UNIX Philosoply in that it stands on the shoulder of giants, namely: curl, awk, sed, diff, mv & rm.
+and easily customizable. It was built in accordance with the UNIX Philosopy and
+stands the shoulder of giants, namely - curl, awk, sed, diff, mv & rm.
   
 It has been tested on AIX, Linux and MacOS.
 
