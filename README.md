@@ -1,3 +1,5 @@
+# BashVaultAgent
+
 BashVaultAgent, or BashiVA, is a simple daemon written in Bash
 to mimic HashiCorp's vault-agent written in Go.
 It ...
@@ -20,7 +22,7 @@ Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
     -v Verbose
 ```
 
-Example:
+## Example
 
   If in Vault at the API path identified by the "WEBDB" tag,
   the secret value of the "password" field is "tiger", then ...
@@ -33,7 +35,8 @@ Example:
 
     <password> tiger </password>
 
-Workflow:
+## Workflow
+
 1. Install two files: bashi_va.sh and bashi_va.cfg
 2. Configure vault server AppRole, policies and secrets for each app
 2. Build your app configuration templates
