@@ -42,3 +42,7 @@ Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
 2. Build your app configuration templates
 3. Configure bashi_va.cfg
 4. Run bashi_va.sh
+
+## More Information
+
+Please read the comments in the bashi_va.cfg file
