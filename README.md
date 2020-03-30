@@ -38,8 +38,8 @@ Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
 ## Workflow
 
 1. Install two files: bashi_va.sh and bashi_va.cfg
-2. Configure AppRole, policies and secrets for each app in the vault server
-2. Build your app configuration templates
+2. In the vault server, configure AppRole, policies and secrets for each app
+2. Copy your app configuration files, and edit into config templates
 3. Configure bashi_va.cfg
 4. Run bashi_va.sh
 
