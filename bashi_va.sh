@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Bash function note - can not use local variables to store stdout function 
+# call returns if you also want to leverage $? for the return value
+
 logged_in=0
 login_attempts=0
 login_attempts_max=4
@@ -44,8 +47,8 @@ EOM
     return $retval
   fi
 
-  local errors=$(read_field_value "$login_response" "errors" "string")
-  if [ errors = "permission denied" ]
+  echo -n "${login_response}" | grep "permission denied" > /dev/null
+  if [ $? -eq 0 ]
   then
     echo "ERROR: login returned permission denied, aborting!"
     echo "ERROR: please verify app role ID and Secret"
@@ -57,7 +60,7 @@ EOM
   # For DEBUG ONLY
   # echo "Vault token: $vault_token"
 
-  if [ $vault_token = "" ]
+  if [ "${vault_token}X" = "X" ]
   then
     echo "ERROR: login returned an empty token, aborting!"
     return 106
@@ -88,12 +91,12 @@ read_field_value () {
   # We can not assume jq is installed, but we can assume awk
 
 
-  local retval=0
+  retval=0
 
   local response_json=$1
   local field_name=$2
   local field_type=$3
-  local field_value="nada"
+  field_value="nada"
 
   if [ $field_type = "string" ]
   then
@@ -119,7 +122,7 @@ read_field_value () {
 
     if [ $? -ne 0 ]
     then
-      retval=102 # Leave room for curl error codes
+      retval=103 # Leave room for curl error codes
     fi
 
   else
@@ -138,27 +141,26 @@ get_secret () {
   # $2 is field name in json to parse
   # $3 is field type in json to parse
 
-  local retval=0
-  local secret_string="N/A"
+  retval=0
+  secret_string="<unknown>"
 
-  local vault_response=$(curl --silent --header "X-Vault-Token: ${vault_token}" --request GET \
+  vault_response=$(curl --silent --header "X-Vault-Token: ${vault_token}" --request GET \
   ${vault_address}/v1/secret/data/$1)
   retval=$?
   if [ $retval -eq 0 ]
   then
 
     # Here is where we try to determine if your token lease expired
-    local errors=$(read_field_value "${vault_response}" "errors" "string")
-    if [ errors = "permission denied" ]
+    echo -n "${vault_response}" | grep "permission denied" > /dev/null
+    if [ $? -eq 0 ]
     then
-      echo "INFO: vault token appears to have been revoked"
-      echo "INFO: setting status to logged out"
+      retval=102
       logged_in=0
       login_attempts=0
+    else
+      secret_string=$(read_field_value "${vault_response}" "$2" $3)
+      retval=$?
     fi
-
-    secret_string=$(read_field_value "${vault_response}" "$2" $3)
-    retval=$?
   fi
 
   echo -n "${secret_string}"
@@ -237,7 +239,7 @@ push_config () {
 
 refresh_configs () {
 
-  local retval=0
+  retval=0
 
   init_config_staging
 
@@ -250,11 +252,12 @@ refresh_configs () {
     do
       IFS='|' read -ra field_spec <<< "${spec_items[i]}"
       local secret_name="${field_spec[0]}"
-      local secret_value=$(get_secret "${vault_path}" "${secret_name}" "${field_spec[1]}")
+      secret_value=$(get_secret "${vault_path}" "${secret_name}" "${field_spec[1]}")
       retval=$?
       if [ $retval -ne 0 ]
       then
-        echo "WARNING: secret read failed with error code: ${code}"
+        echo "WARNING: secret read failed with error code: ${retval}"
+        echo "WARNING: failed path - ${vault_path}::${secret_name}"
       fi
       local replacement_target="${template_prefix}::${secret_name}"
       for cfg in "${configs[@]}"
