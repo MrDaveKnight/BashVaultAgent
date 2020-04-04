@@ -28,21 +28,13 @@ login () {
   # This technique is analogous to MFA, Multi-Factor Authentication
 
   echo "Logging into vault..."
-  cat << EOM > login_payload.json
-  {
-    "role_id": "${app_role_id}",
-    "secret_id": "${APP_ROLE_SECRET}"
-  }
-EOM
-
-
-  #local login_response=$(cat token.json)
-  local login_response=$(curl --silent --request POST \
-  --data @login_payload.json ${vault_address}/v1/auth/approle/login)
+  local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${APP_ROLE_SECRET}\"}"
+  login_response=$(curl --silent --request POST \
+  --data ${login_payload} ${vault_address}/v1/auth/approle/login)
   local retval=$?
   if [ $retval -ne 0 ]
   then
-    echo "Error encountered logging into vault"
+    echo "ERROR: communication problems during login"
     echo $login_response
     return $retval
   fi
@@ -50,19 +42,16 @@ EOM
   echo -n "${login_response}" | grep "permission denied" > /dev/null
   if [ $? -eq 0 ]
   then
-    echo "ERROR: login returned permission denied, aborting!"
-    echo "ERROR: please verify app role ID and Secret"
+    echo "ERROR: login returned permission denied!"
+    echo "ERROR: please verify app role ID and Secret are still valid"
     return 105
   fi
 
   vault_token=$(read_field_value "$login_response" "client_token" "string")
 
-  # For DEBUG ONLY
-  # echo "Vault token: $vault_token"
-
   if [ "${vault_token}X" = "X" ]
   then
-    echo "ERROR: login returned an empty token, aborting!"
+    echo "ERROR: login returned an empty token!"
     return 106
   fi
   return 0
