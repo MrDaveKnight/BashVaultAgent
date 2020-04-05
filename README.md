@@ -8,10 +8,10 @@ It ...
   - Injects those secrets into an application by generating
     a configuration file from a template and the secrets, and signalling the 
     application to refresh or restart when the configuration file is available.
-    Note that those secrets may be re-encrypted before writing to the 
-    configuration file with either syncrhonous or asynchronous cryptography.
-    The application will be responsible for decrypting during configuration
-    ingest
+    
+Note that secrets may be optionally re-encrypted before writing to the 
+configuration file with either syncrhonous or asynchronous cryptography.
+The application will be responsible for decrypting during configuration ingest.
 
 BashiVA was built specifically to support AIX, and to be simple
 and easily customizable. It was built in accordance with the UNIX Philosopy and
