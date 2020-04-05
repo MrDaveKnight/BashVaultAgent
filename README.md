@@ -15,7 +15,7 @@ It ...
 
 BashiVA was built specifically to support AIX, and to be simple
 and easily customizable. It was built in accordance with the UNIX Philosopy and
-stands on the shoulders of giants, namely - curl, awk, sed, diff, cp, mv & rm.
+stands on the shoulders of giants, namely - curl, awk, sed, diff, openssl, cp, mv & rm.
   
 It has been tested on AIX (7.1, 7.2), Linux and MacOS.
 
