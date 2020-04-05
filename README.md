@@ -6,8 +6,12 @@ It ...
   - Authenticates with the HashiCorp Vault server via AppRole
   - Downloads secrets from Vault on behalf of an application
   - Injects those secrets into an application by generating
-    a configuration file from a template and secrets, and signalling the 
-    application to refresh or restart when the configuration file is available
+    a configuration file from a template and the secrets, and signalling the 
+    application to refresh or restart when the configuration file is available.
+    Note that those secrets may be re-encrypted before writing to the 
+    configuration file with either syncrhonous or asynchronous cryptography.
+    The application will be responsible for decrypting during configuration
+    ingest
 
 BashiVA was built specifically to support AIX, and to be simple
 and easily customizable. It was built in accordance with the UNIX Philosopy and
