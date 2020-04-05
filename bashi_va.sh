@@ -11,11 +11,15 @@ comm_error_count=0
 config="nada"
 verbose=0
 vault_token="nada"
+encrypting_secrets=0
+decrypting_env=0
 
 usage () {
   cat << EOF
-Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-hv] -c <file>
+Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-dehv] -c <file> 
   -c  Config <file> 
+  -d  Decrypt APP_ROLE_SECRET env variable 
+  -e  Encrypt secrets in config files 
   -h  Usage
   -v  Verbose
 EOF
@@ -27,8 +31,24 @@ login () {
   # The App Role Secret is passed in via an environment variable
   # This technique is analogous to MFA, Multi-Factor Authentication
 
+  local secret="${APP_ROLE_SECRET}"
+  local salt="-salt"
+  if [ ${salted} != "true" ]
+  then 
+    salt="-nosalt"
+  fi
+
+  if [ ${decrypting_env} -eq 1 ]
+  then
+    # Decrypt APP_ROLE_SECRET
+    secret=$(echo "${APP_ROLE_SECRET}" | \
+      openssl enc -${cipher} -base64 -k ${decryption_password} ${salt} -d)
+  fi
+
+  echo $secret
+
   echo "Logging into vault..."
-  local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${APP_ROLE_SECRET}\"}"
+  local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${secret}\"}"
   login_response=$(curl --silent --request POST \
   --data ${login_payload} ${vault_address}/v1/auth/approle/login)
   local retval=$?
@@ -176,6 +196,50 @@ init_config_staging () {
   done
 }
 
+encrypt_secret () {
+  # $1 is the unencrypted secret
+  # Returns a "modified" base64 encoded version of encrypted secret.
+  #
+  # Did not go with a full base64url encoding, just the / to _ piece. In other words,
+  # a "/" is replaced by a "_" because having a / in a sed command messes it up. 
+  # 
+  # The application reading and decrypting this variable will have to execute 
+  # a tr '_' '/' before doing a base64 decode, followed by the decrypt. Notice that 
+  # command in the following examples.
+  #
+  # To decrypt asyncronous cipher text created with a public key:
+  # echo "<cipher text>" | tr '_' '/' | base64 -D | openssl rsautl -decrypt -inkey <private.key> -keyform pem
+  # 
+  # To decrypt syncronously cipher text created with a shared secret password:
+  # echo "<cipher text>" | openssl enc -<cipher> -base64 -k <shared_password> [-salt | -nosalt] 
+  #
+  # See the openssl algorithms below for more understanding. Most of the configuration options
+  # are in the bashi_va.cfg file. 
+
+  local secret=$1
+  retval=0
+  encrypted_encoded_secret="undefined"
+
+  if [ ${encryption_method} = "a" ]        # s|a : symetric or asymetric encryption of secrets
+  then
+  
+    encrypted_encoded_secret=$(echo -n "${secret}" | openssl rsautl -encrypt \
+      -inkey ${encryption_public_key_file} -keyform pem -pubin | base64 | tr '/' '_')
+    retval=$?
+    echo -n "${encrypted_encoded_secret}"
+    return $?
+
+  else
+
+    encrypted_encoded_secret=$(echo -n "${secret}" | openssl enc \
+      -${cipher} -base64 -k ${encryption_password} ${salt} | tr '/' '_')
+    retval=$?
+    echo -n "${encrypted_encoded_secret}"
+    return $?
+
+  fi
+}
+
 push_config () {
 
   for c in "${configs[@]}"
@@ -248,11 +312,22 @@ refresh_configs () {
         echo "WARNING: secret read failed with error code: ${retval}"
         echo "WARNING: failed path - ${vault_path}::${secret_name}"
       fi
+
+      if [ ${encrypting_secrets} -eq 1 ]
+      then
+
+        secret_value=$(encrypt_secret "${secret_value}") 
+
+      fi
+
       local replacement_target="${template_prefix}::${secret_name}"
       for cfg in "${configs[@]}"
       do
         IFS=':' read -ra cfg_items <<< "$cfg"
         local template_file="${cfg_items[0]}_STAGING"
+
+echo "${secret_value}"
+
 
         # AIX sed does not have -i option (that is the gnu verions)
         sed "s/{{ *${replacement_target} *}}/${secret_value}/g" \
@@ -274,8 +349,15 @@ refresh_configs () {
   return $retval
 }
 
-while getopts ":hva:c:n:i:r:" opt; do
+
+while getopts ":c:dehv" opt; do
   case ${opt} in
+    d )
+      decrypting_env=1
+      ;;
+    e )
+      encrypting_secrets=1
+      ;;
     h )
       usage
       exit 0
@@ -286,11 +368,15 @@ while getopts ":hva:c:n:i:r:" opt; do
     v )
       verbose=1
       ;;
+   \? )
+      usage
+      exit 0
+      ;;
   esac
 done
 shift $((OPTIND -1))
 
-if [ -z ${APP_ROLE_SECRET} ]
+if [ -z "${APP_ROLE_SECRET}" ]
 then
   echo "ERROR: no APP_ROLE_SECRET provided!"
   usage
@@ -301,12 +387,18 @@ fi
 # Configuration
 #################
 
-# Declare
+#
+# Declare required variables
+#
+
 refresh_interval="nada"
 app_role_id="nada"
 vault_address="nada"
 
+#
 # Load
+#
+
 if [ ! -f $config ]
 then
   echo "ERROR: no config file provided!"
@@ -315,7 +407,10 @@ then
 fi
 source $config
 
+#
 # Validate
+#
+
 if [ refresh_interval = "nada" ]
 then
   echo "ERROR: no refresh interval configured!"
@@ -332,6 +427,67 @@ then
   usage
   exit 1
 fi
+
+if [ ${encrypting_secrets} -eq 1 ]
+then
+  if [ "${encryption_method}X" = "X" ]
+  then
+    echo "ERROR: no encryption method configured!"
+    usage
+    exit 1
+  elif [ "${encryption_method}" != "a" ] && [ "${encryption_method}" != "s" ] 
+  then
+    echo "ERROR: ${encryption_method} is an invalid encryption method (s|a)" 
+    usage
+    exit 1
+  fi 
+
+  if [ "${encryption_method}" = "s" ]
+  then
+    if [ "${encryption_password}X" = "X" ]
+    then
+      echo "ERROR: no encryption password configured!"
+      usage
+      exit 1
+    fi 
+  else 
+    if [ "${encryption_public_key_file}X" = "X" ]
+    then
+      echo "ERROR: no public key file configured!"
+      usage
+      exit 1
+    elif [ ! -f "${encryption_public_key_file}" ]
+    then
+      echo "ERROR: can not find ${encryption_public_key_file}!"
+      usage
+      exit 1
+    fi 
+  fi 
+fi
+
+if [ ${decrypting_env} -eq 1 ]
+then
+  if [ "${cipher}X" = "X" ]
+  then
+    echo "ERROR: no symetric cipher configured!"
+    usage
+    exit 1
+  elif [ "${salted}X" = "X" ]
+  then
+    echo "ERROR: no salt flag configured!"
+    usage
+    exit 1
+  elif [ "${decryption_password}X" = "X" ]
+  then
+    echo "ERROR: no decryption password configured!"
+    usage
+    exit 1
+  fi 
+fi
+
+#
+# End validation
+#
 
 if [ $verbose -eq 1 ]
 then
