@@ -23,7 +23,7 @@ It has been tested on AIX (7.1, 7.2), Linux and MacOS.
 Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-dehv] -c <file>
     -c  Config <file> 
     -d  Decrypt APP_ROLE_SECRET env variable 
-    -e  Encrypt secrets in config files 
+    -e  Encrypt secrets written to config files 
     -h  Usage
     -v  Verbose
 ```
