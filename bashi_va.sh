@@ -220,7 +220,7 @@ encrypt_secret () {
   retval=0
   encrypted_encoded_secret="undefined"
 
-  if [ ${encryption_method} = "a" ]        # s|a : symetric or asymetric encryption of secrets
+  if [ ${encryption_method} = "a" ]        # s|a : symmetric or asymmetric encryption of secrets
   then
   
     encrypted_encoded_secret=$(echo -n "${secret}" | openssl rsautl -encrypt \
@@ -469,7 +469,7 @@ if [ ${decrypting_env} -eq 1 ]
 then
   if [ "${cipher}X" = "X" ]
   then
-    echo "ERROR: no symetric cipher configured!"
+    echo "ERROR: no symmetric cipher configured!"
     usage
     exit 1
   elif [ "${salted}X" = "X" ]
