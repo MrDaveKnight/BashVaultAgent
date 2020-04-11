@@ -232,9 +232,14 @@ encrypt_secret () {
   
     encrypted_encoded_secret=$(echo -n "${secret}" | openssl rsautl -encrypt \
       -inkey ${encryption_public_key_file} -keyform pem -pubin | openssl base64 | tr '/\n' '_-')
-    retval=$?
+
+    if [ "${encrypted_encoded_secret}X" = "X" ]
+    then
+      encrypted_encoded_secret="encryption_failure"
+      retval=107
+    fi
     echo -n "${encrypted_encoded_secret}"
-    return $retval 
+    return $retval
 
   else
 
@@ -324,6 +329,10 @@ refresh_configs () {
       then
 
         secret_value=$(encrypt_secret "${secret_value}") 
+        if [ $? -ne 0 ]
+        then
+          echo "ERROR: secret re-encryption failed for ${vault_path}::${secret_name}" >&2
+        fi
 
       fi
 
