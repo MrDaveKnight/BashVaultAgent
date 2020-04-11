@@ -49,13 +49,13 @@ login () {
 
   echo "Logging into vault..."
   local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${secret}\"}"
-  login_response=$(curl --silent --request POST \
+  login_response=$(curl --silent --connect-timeout 5 --request POST \
   --data ${login_payload} ${vault_address}/v1/auth/approle/login)
   local retval=$?
   if [ $retval -ne 0 ]
   then
-    echo "ERROR: communication problems during login"
-    echo $login_response
+    echo "ERROR: communication problems during login" >&2
+    echo $login_response >&2
     return $retval
   fi
 
@@ -71,7 +71,7 @@ login () {
 
   if [ "${vault_token}X" = "X" ]
   then
-    echo "ERROR: login returned an empty token!"
+    echo "ERROR: login returned an empty token!" >&2
     return 106
   fi
   return 0
@@ -153,8 +153,9 @@ get_secret () {
   retval=0
   secret_string="<unknown>"
 
-  vault_response=$(curl --silent --header "X-Vault-Token: ${vault_token}" --request GET \
-  ${vault_address}/v1/secret/data/$1)
+  vault_response=$(curl --silent --connect-timeout 5 \
+    --header "X-Vault-Token: ${vault_token}" --request GET \
+    ${vault_address}/v1/secret/data/$1)
   retval=$?
   if [ $retval -eq 0 ]
   then
@@ -185,12 +186,12 @@ init_config_staging () {
     local staging_template="${template}_STAGING"
     if [ ! -f ${template} ]
     then
-      echo "WARNING: Configured template ${template} does not exist"
+      echo "WARNING: Configured template ${template} does not exist" >&2
     else
       cp "${template}" "${staging_template}"
       if [ $? -ne 0 ]
       then
-        echo "WARNING: cp of ${template} to ${staging_template} failed"
+        echo "WARNING: cp of ${template} to ${staging_template} failed" >&2
       fi
     fi
   done
