@@ -41,11 +41,11 @@ login () {
   if [ ${decrypting_env} -eq 1 ]
   then
     # Decrypt APP_ROLE_SECRET
+    # Pure base64 is fine since an APP_ROLE_SECRET doesn't create
+    # multiline cipher text (i.e., no 'tr' calls needed)
     secret=$(echo "${APP_ROLE_SECRET}" | \
       openssl enc -${cipher} -base64 -k ${decryption_password} ${salt} -d)
   fi
-
-  echo $secret
 
   echo "Logging into vault..."
   local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${secret}\"}"
@@ -198,20 +198,26 @@ init_config_staging () {
 
 encrypt_secret () {
   # $1 is the unencrypted secret
-  # Returns a "modified" base64 encoded version of encrypted secret.
+  # Returns a >> MODIFIED << base64url encoded version of encrypted secret. 
   #
-  # Did not go with a full base64url encoding, just the / to _ piece. In other words,
-  # a "/" is replaced by a "_" because having a / in a sed command messes it up. 
+  # Why? Because '/' and '\n' can not be handled in the "to-string" of the sed command
+  # that is writing the re-encrypted secret values to the config files.
+  #
+  # Here are the transforms done
+  #  '/' is replaced by '_'
+  #  '\n' is replaced by '-' (in standard base64url, '+' is replaced by '-')
   # 
-  # The application reading and decrypting this variable will have to execute 
-  # a tr '_' '/' before doing a base64 decode, followed by the decrypt. Notice that 
-  # command in the following examples.
+  # Therefore, the application reading and decrypting this variable will have to 
+  # replace '_' with '/', and '-' with '/n' before doing a base64 decode, 
+  # followed by the decrypt. 
   #
   # To decrypt asyncronous cipher text created with a public key:
-  # echo "<cipher text>" | tr '_' '/' | base64 -D | openssl rsautl -decrypt -inkey <private.key> -keyform pem
+  #   echo "<cipher text>" | tr '\-_' '\n/' | 
+  #    openssl base64 -d | openssl rsautl -decrypt -inkey <private.key> -keyform pem
   # 
   # To decrypt syncronously cipher text created with a shared secret password:
-  # echo "<cipher text>" | openssl enc -<cipher> -base64 -k <shared_password> [-salt | -nosalt] 
+  #   echo "<cipher text>" | tr '\-_' '\n/' | 
+  #     openssl enc -<cipher> -base64 -k <shared_password> [-salt | -nosalt] -d 
   #
   # See the openssl algorithms below for more understanding. Most of the configuration options
   # are in the bashi_va.cfg file. 
@@ -224,7 +230,7 @@ encrypt_secret () {
   then
   
     encrypted_encoded_secret=$(echo -n "${secret}" | openssl rsautl -encrypt \
-      -inkey ${encryption_public_key_file} -keyform pem -pubin | base64 | tr '/' '_')
+      -inkey ${encryption_public_key_file} -keyform pem -pubin | base64 | tr '/\n' '_-')
     retval=$?
     echo -n "${encrypted_encoded_secret}"
     return $?
@@ -232,7 +238,7 @@ encrypt_secret () {
   else
 
     encrypted_encoded_secret=$(echo -n "${secret}" | openssl enc \
-      -${cipher} -base64 -k ${encryption_password} ${salt} | tr '/' '_')
+      -${cipher} -base64 -k ${encryption_password} ${salt} | tr '/\n' '_-')
     retval=$?
     echo -n "${encrypted_encoded_secret}"
     return $?
@@ -326,8 +332,7 @@ refresh_configs () {
         IFS=':' read -ra cfg_items <<< "$cfg"
         local template_file="${cfg_items[0]}_STAGING"
 
-echo "${secret_value}"
-
+        
 
         # AIX sed does not have -i option (that is the gnu verions)
         sed "s/{{ *${replacement_target} *}}/${secret_value}/g" \
@@ -540,13 +545,16 @@ do
   #################
   # Do your job
   #################
-  refresh_configs
-
-  if [ $? -ne 0 ]
+  if [ $logged_in -eq 1 ]
   then
-    comm_error_count=$((comm_error_count + 1))
-  else
-    comm_error_count=0
+    refresh_configs
+
+    if [ $? -ne 0 ]
+    then
+      comm_error_count=$((comm_error_count + 1))
+    else
+      comm_error_count=0
+    fi
   fi
 
   if [ $verbose -eq 1 ]
