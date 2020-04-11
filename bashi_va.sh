@@ -41,9 +41,9 @@ login () {
   if [ ${decrypting_env} -eq 1 ]
   then
     # Decrypt APP_ROLE_SECRET
-    # Pure base64 is fine since an APP_ROLE_SECRET doesn't create
-    # multiline cipher text (i.e., no 'tr' calls needed)
-    secret=$(echo "${APP_ROLE_SECRET}" | \
+    # Assumes newlines and slashes ('/') were transformed to
+    # dashes '-' and underscores '_'!
+    secret=$(echo "${APP_ROLE_SECRET}" | tr '\-_' '\n/' | \
       openssl enc -${cipher} -base64 -k ${decryption_password} ${salt} -d)
   fi
 
