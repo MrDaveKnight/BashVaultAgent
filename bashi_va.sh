@@ -62,8 +62,8 @@ login () {
   echo -n "${login_response}" | grep "permission denied" > /dev/null
   if [ $? -eq 0 ]
   then
-    echo "ERROR: login returned permission denied!"
-    echo "ERROR: please verify app role ID and Secret are still valid"
+    echo "ERROR: login returned permission denied!" >&2
+    echo "ERROR: please verify app role ID and Secret are still valid" >&2
     return 105
   fi
 
@@ -171,6 +171,8 @@ get_secret () {
       secret_string=$(read_field_value "${vault_response}" "$2" $3)
       retval=$?
     fi
+  else
+    echo "ERROR: get_secret curl failed!" >&2
   fi
 
   echo -n "${secret_string}"
@@ -282,19 +284,19 @@ push_config () {
         mv -f "${staging_template}" "${config_file}"
         if [ $? -ne 0 ]
         then
-          echo "WARNING: cp failed during configuration push!"
+          echo "WARNING: cp failed during configuration push!" >&2
         else
           bash -c "${script}"
           if [ $? -ne 0 ]
           then
-            echo "WARNING: the following re-configuration script failed:"
+            echo "WARNING: the following re-configuration script failed:" >&2
             echo "${script}"
           fi
         fi
       elif [ $diff_result -gt 1 ]
       then
         rm "${staging_template}"
-        echo "ERROR: with configuration file diff!"
+        echo "ERROR: with configuration file diff!" >&2
       else
         rm "${staging_template}"
       fi
@@ -321,8 +323,8 @@ refresh_configs () {
       retval=$?
       if [ $retval -ne 0 ]
       then
-        echo "WARNING: secret read failed with error code: ${retval}"
-        echo "WARNING: failed path - ${vault_path}::${secret_name}"
+        echo "WARNING: secret read failed with error code: ${retval}" >&2
+        echo "WARNING: failed path - ${vault_path}::${secret_name}" >&2
       fi
 
       if [ ${encrypting_secrets} -eq 1 ]
@@ -349,12 +351,12 @@ refresh_configs () {
           ${template_file} > .bashi_vault_agent_config_tmp.txt
         if [ $? -ne 0 ]
         then
-          echo "WARNING: sed failed during configuration staging!"
+          echo "WARNING: sed failed during configuration staging!" >&2
         fi
         mv .bashi_vault_agent_config_tmp.txt ${template_file}
         if [ $? -ne 0 ]
         then
-          echo "WARNING: mv failed during configuration staging!"
+          echo "WARNING: mv failed during configuration staging!" >&2
         fi
       done
     done
@@ -393,7 +395,7 @@ shift $((OPTIND -1))
 
 if [ -z "${APP_ROLE_SECRET}" ]
 then
-  echo "ERROR: no APP_ROLE_SECRET provided!"
+  echo "ERROR: no APP_ROLE_SECRET provided!" >&2
   usage
   exit 1
 fi
@@ -416,7 +418,7 @@ vault_address="nada"
 
 if [ ! -f $config ]
 then
-  echo "ERROR: no config file provided!"
+  echo "ERROR: no config file provided!" >&2
   usage
   exit 1
 fi
@@ -428,17 +430,17 @@ source $config
 
 if [ refresh_interval = "nada" ]
 then
-  echo "ERROR: no refresh interval configured!"
+  echo "ERROR: no refresh interval configured!" >&2
   usage
   exit 1
 elif [ app_role_id = "nada" ]
 then
-  echo "ERROR: no refresh interval configured!"
+  echo "ERROR: no refresh interval configured!" >&2
   usage
   exit 1
 elif [ vault_address = "nada" ]
 then
-  echo "ERROR: no vault server address configured!"
+  echo "ERROR: no vault server address configured!" >&2
   usage
   exit 1
 fi
@@ -447,12 +449,12 @@ if [ ${encrypting_secrets} -eq 1 ]
 then
   if [ "${encryption_method}X" = "X" ]
   then
-    echo "ERROR: no encryption method configured!"
+    echo "ERROR: no encryption method configured!" >&2
     usage
     exit 1
   elif [ "${encryption_method}" != "a" ] && [ "${encryption_method}" != "s" ] 
   then
-    echo "ERROR: ${encryption_method} is an invalid encryption method (s|a)" 
+    echo "ERROR: ${encryption_method} is an invalid encryption method (s|a)"  >&2
     usage
     exit 1
   fi 
@@ -461,19 +463,19 @@ then
   then
     if [ "${encryption_password}X" = "X" ]
     then
-      echo "ERROR: no encryption password configured!"
+      echo "ERROR: no encryption password configured!" >&2
       usage
       exit 1
     fi 
   else 
     if [ "${encryption_public_key_file}X" = "X" ]
     then
-      echo "ERROR: no public key file configured!"
+      echo "ERROR: no public key file configured!" >&2
       usage
       exit 1
     elif [ ! -f "${encryption_public_key_file}" ]
     then
-      echo "ERROR: can not find ${encryption_public_key_file}!"
+      echo "ERROR: can not find ${encryption_public_key_file}!" >&2
       usage
       exit 1
     fi 
@@ -484,17 +486,17 @@ if [ ${decrypting_env} -eq 1 ]
 then
   if [ "${cipher}X" = "X" ]
   then
-    echo "ERROR: no symmetric cipher configured!"
+    echo "ERROR: no symmetric cipher configured!" >&2
     usage
     exit 1
   elif [ "${salted}X" = "X" ]
   then
-    echo "ERROR: no salt flag configured!"
+    echo "ERROR: no salt flag configured!" >&2
     usage
     exit 1
   elif [ "${decryption_password}X" = "X" ]
   then
-    echo "ERROR: no decryption password configured!"
+    echo "ERROR: no decryption password configured!" >&2
     usage
     exit 1
   fi 
@@ -532,7 +534,7 @@ do
 
   if [ $login_attempts -gt $login_attempts_max ]
   then
-    echo "ERROR: could not login to vault! Aborting"
+    echo "ERROR: could not login to vault! Aborting" >&2
     exit 2
   elif [ $logged_in -ne 1 ]
   then
@@ -548,7 +550,7 @@ do
       logged_in=1
       login_attempts=0
     else
-      echo "WARNING: failed an attempt to login to vault!"
+      echo "WARNING: failed an attempt to login to vault!" >&2
     fi
   fi
 
