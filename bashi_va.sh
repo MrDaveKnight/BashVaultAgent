@@ -47,7 +47,10 @@ login () {
       openssl enc -${cipher} -base64 -k ${decryption_password} ${salt} -d)
   fi
 
-  echo "Logging into vault..."
+  if [ $verbose -eq 1 ]
+  then
+    echo "Logging in to vault..."
+  fi
   local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${secret}\"}"
   login_response=$(curl --silent --connect-timeout 5 --request POST \
   --data ${login_payload} ${vault_address}/v1/auth/approle/login)
@@ -541,7 +544,7 @@ do
     login_attempts=$((login_attempts + 1))
 
     #################
-    # Login to Vault
+    # Log in to Vault
     #################
     login
 
@@ -549,6 +552,7 @@ do
     then
       logged_in=1
       login_attempts=0
+      echo "Logged in to vault at ${vault_address}" 
     else
       echo "WARNING: failed an attempt to login to vault!" >&2
     fi
