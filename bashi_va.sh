@@ -231,10 +231,10 @@ encrypt_secret () {
   then
   
     encrypted_encoded_secret=$(echo -n "${secret}" | openssl rsautl -encrypt \
-      -inkey ${encryption_public_key_file} -keyform pem -pubin | base64 | tr '/\n' '_-')
+      -inkey ${encryption_public_key_file} -keyform pem -pubin | openssl base64 | tr '/\n' '_-')
     retval=$?
     echo -n "${encrypted_encoded_secret}"
-    return $?
+    return $retval 
 
   else
 
