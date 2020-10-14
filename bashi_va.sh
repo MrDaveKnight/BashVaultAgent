@@ -53,11 +53,12 @@ login () {
   fi
   local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${secret}\"}"
   login_response=$(curl --silent --connect-timeout 5 --request POST \
+  --header "X-Vault-Namespace: ${vault_namespace}" \
   --data ${login_payload} ${vault_address}/v1/auth/approle/login)
   local retval=$?
   if [ $retval -ne 0 ]
   then
-    echo "ERROR: communication problems during login" >&2
+    echo "ERROR: communication problems with ${vault_address} during login" >&2
     echo $login_response >&2
     return $retval
   fi
@@ -157,7 +158,7 @@ get_secret () {
   secret_string="<unknown>"
 
   vault_response=$(curl --silent --connect-timeout 5 \
-    --header "X-Vault-Token: ${vault_token}" --request GET \
+    --header "X-Vault-Token: ${vault_token}" --header "X-Vault-Namespace: ${vault_namespace}" --request GET \
     ${vault_address}/v1/secret/data/$1)
   retval=$?
   if [ $retval -eq 0 ]
