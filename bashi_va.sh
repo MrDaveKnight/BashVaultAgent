@@ -16,7 +16,7 @@ decrypting_env=0
 
 usage () {
   cat << EOF
-Usage:  APP_ROLE_SECRET="<app_role_secret>" bashi_va.sh [-dehv] -c <file> 
+Usage:  APP_ROLE_SECRET="<boot_role_secret>" bashi_va.sh [-dehv] -c <file> 
   -c  Config <file> 
   -d  Decrypt APP_ROLE_SECRET env variable 
   -e  Encrypt secrets in config files 
@@ -26,12 +26,110 @@ EOF
 }
 
 login () {
+
+
+  local role="${boot_role_id}"
+  local secret="${APP_ROLE_SECRET}"
+  if [ "${secret}X" = "X" ]
+  then
+    echo "ALERT: phase 2 login failed! Was boot token compromised?!" >&2
+    return 110
+  fi
+
+  #
+  # Login phase 1
+  #
+  # Will return a token that should only be allowed two uses,
+  # once to get a new role-id, and once to get
+  # the associated secret-id
+  #
+
+  login_helper $role $secret "phase 1"
+  local retval=$?
+   
+  if [ $retval -ne 0 ]
+  then        
+    return $retval
+  fi
+
+  unset APP_ROLE_SECRET
+
+  if [ $verbose -eq 1 ]
+  then
+    echo "Boot agent logged in."
+  fi
+
+  #
+  # Login Phase 2
+  #
+  # Now get the runtime role-id and secret-id for the 
+  # primary run-time role over this secure channel, 
+  # and login to that primary role
+  #
+
+  role_response=$(curl --silent --connect-timeout 5 --request GET \
+  --header "X-Vault-Token: ${vault_token}" \
+  ${vault_address}/v1/auth/approle/role/${app_role_name}/role-id)
+  retval=$?
+
+  if [ $retval -ne 0 ]
+  then        
+    echo "ERROR: communication problems with ${vault_address} during login phase 2 role read" >&2
+    echo "ERROR RESPONSE: $role_response" >&2
+    return $retval
+  fi
+
+  local role_id=$(read_field_value "$role_response" "role_id" "string")
+
+  if [ "${role_id}X" = "X" ]
+  then
+    echo "ERROR: role read returned an empty token!" >&2
+    echo "ERROR RESPONSE: ${role_response}" >&2
+    return 106
+  fi
+
+  secret_response=$(curl --silent --connect-timeout 5 --request POST \
+  --header "X-Vault-Token: ${vault_token}" \
+  ${vault_address}/v1/auth/approle/role/${app_role_name}/secret-id)
+  retval=$?
+
+  if [ $retval -ne 0 ]
+  then        
+    echo "ERROR: communication problems with ${vault_address} during login phase 2 secret read" >&2
+    echo $secret_response >&2
+    return $retval
+  fi
+
+  local secret_id=$(read_field_value "$secret_response" "secret_id" "string")
+
+  if [ "${secret_id}X" = "X" ]
+  then
+    echo "ERROR: app-role secret read returned an empty token!" >&2
+    echo "ERROR RESPONSE:${secret_response}" >&2
+    return 106
+  fi
+
+
+  decrypting_env=0
+  login_helper $role_id $secret_id "phase 2"
+  retval=$? 
+
+  if [ $retval -eq 0 ] && [ $verbose -eq 1 ]
+  then
+    echo "Runtime agent logged in."
+  fi
+  return $retval 
+}
+
+login_helper () {
   # Uses the AppRole autentication mechanism
   # The App Role ID is passed in via the configuration file
   # The App Role Secret is passed in via an environment variable
   # This technique is analogous to MFA, Multi-Factor Authentication
 
-  local secret="${APP_ROLE_SECRET}"
+  local role_id="$1"
+  local secret_id="$2"
+  local phase="$3"
   local salt="-salt"
   if [ ${salted} != "true" ]
   then 
@@ -43,16 +141,17 @@ login () {
     # Decrypt APP_ROLE_SECRET
     # Assumes newlines and slashes ('/') were transformed to
     # dashes '-' and underscores '_'!
-    secret=$(echo "${APP_ROLE_SECRET}" | tr '\-_' '\n/' | \
+    secret_id=$(echo "${secret_id}" | tr '\-_' '\n/' | \
       openssl enc -${cipher} -base64 -k ${decryption_password} ${salt} -d)
   fi
 
+
   if [ $verbose -eq 1 ]
   then
-    echo "Logging in to vault..."
+    echo "Logging in to vault ${phase}"
   fi
-  local login_payload="{\"role_id\":\"${app_role_id}\",\"secret_id\":\"${secret}\"}"
-  login_response=$(curl --silent --connect-timeout 5 --request POST \
+  local login_payload="{\"role_id\":\"${role_id}\",\"secret_id\":\"${secret_id}\"}"
+  local login_response=$(curl --silent --connect-timeout 5 --request POST \
   --header "X-Vault-Namespace: ${vault_namespace}" \
   --data ${login_payload} ${vault_address}/v1/auth/approle/login)
   local retval=$?
@@ -75,9 +174,10 @@ login () {
 
   if [ "${vault_token}X" = "X" ]
   then
-    echo "ERROR: login returned an empty token!" >&2
+    echo "ERROR: login ${phase} returned an empty token! RESPONSE: ${login_response}" >&2
     return 106
   fi
+
   return 0
 }
 
@@ -413,7 +513,7 @@ fi
 #
 
 refresh_interval="nada"
-app_role_id="nada"
+boot_role_id="nada"
 vault_address="nada"
 
 #
@@ -437,7 +537,7 @@ then
   echo "ERROR: no refresh interval configured!" >&2
   usage
   exit 1
-elif [ app_role_id = "nada" ]
+elif [ boot_role_id = "nada" ]
 then
   echo "ERROR: no refresh interval configured!" >&2
   usage
